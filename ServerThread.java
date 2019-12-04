@@ -17,6 +17,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -88,7 +90,14 @@ public class ServerThread extends Thread{
                         }
                         else if (slp[0].equals("UPLD")) {
                             String fileName=slp[1];
-                            //if fileExists(fileName), send UPLD F
+                            if (fileExists(fileName)) {
+                                out.write("UPLD     F     "+fileName+"     NAME\n");
+                                out.flush();
+                            }
+                            else if (!isSanitized(fileName)) {
+                                out.write("UPLD     F     "+fileName+"     BADNAME\n");
+                                out.flush();
+                            }
                             out.write("UPLD     T\n");
                             out.flush();
                         }
@@ -97,6 +106,10 @@ public class ServerThread extends Thread{
                             if (!fileExists(fileName))
                             {
                                 out.write("DWNL     F     "+fileName+"     NAME\n");
+                                out.flush();
+                            }
+                            else if (!isSanitized(fileName)) {
+                                out.write("DWNL     F     "+fileName+"     BADNAME\n");
                                 out.flush();
                             }
                             else
@@ -264,6 +277,12 @@ public class ServerThread extends Thread{
                 return;
             }
         }*/
+    }
+    public boolean isSanitized(String fileName) {
+        //for the file name, we are allowing letters, numbers, and dots only.
+        Pattern p= Pattern.compile("[a-z0-9.]", Pattern.CASE_INSENSITIVE);
+        Matcher m= p.matcher(fileName);
+        return m.find();
     }
     public String contents() {
         String str="";
