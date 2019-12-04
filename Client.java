@@ -152,6 +152,10 @@ public class Client {
                 {
                     System.out.println("File by this name exists.");
                 }
+                else if (str[2].equals("BADNAME"))
+                {
+                    System.out.println("Bad file name: only letters, numbers and dots.");
+                }
                 else if (str[2].equals("CONG"))
                 {
                     System.out.println("Network busy");
@@ -178,6 +182,14 @@ public class Client {
             if (str[1].equals("F")) {
                 if (str[2].equals("NAME")) {
                     System.out.println("file "+str[3]+" doesn't exist.");
+                }
+                else if (str[2].equals("BADNAME"))
+                {
+                    System.out.println("Bad file name: only letters, numbers and dots.");
+                }
+                else if (str[2].equals("CONG"))
+                {
+                    System.out.println("Network busy.");
                 }
                 //maybe other reasons?
             }
