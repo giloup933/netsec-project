@@ -13,6 +13,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import static java.lang.System.exit;
 import java.net.InetAddress;
@@ -41,7 +42,7 @@ public class Client {
     static final int PORT=3421;
     private Socket socket=null;
     private BufferedReader in=null, sin=null; 
-    private PrintWriter out=null;
+    private OutputStreamWriter out=null;
     private String state="WAITING";
     private byte[] key, ctr;
     private String dwnl="";
@@ -57,7 +58,8 @@ public class Client {
             socket=new Socket(InetAddress.getByName(addr), PORT);
             sin=new BufferedReader(new InputStreamReader(System.in));
             in=new BufferedReader(new InputStreamReader(socket.getInputStream()));//terminal? System.in
-            out=new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true); 
+            out=new OutputStreamWriter(socket.getOutputStream());
+            // out=new OutputStream(new OutputStreamWriter(socket.getOutputStream()), true); 
         }
         catch (Exception e) {
             System.out.println(e);
@@ -317,7 +319,7 @@ public class Client {
         }
         state="WAITING";*/
     }
-    public void processUserInput(String str) {
+    public void processUserInput(String str) throws IOException {
         state="PROCESSING";
         String toSend="";
         String[] spl=str.split(" ");

@@ -67,6 +67,7 @@ public class ServerThread extends Thread{
                     }
                     else if (line.equals("RKEY"))
                     {
+                        System.out.println(new String(Server.pubKey.getEncoded())+" is the RSA pubKey.");
                         out.write("SKEY     "+new String(Server.pubKey.getEncoded())+"\n");
                         System.out.println(new String(Server.pubKey.getEncoded())+" is the RSA pubKey.");
                         out.flush();
