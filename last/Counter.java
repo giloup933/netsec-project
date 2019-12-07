@@ -11,8 +11,9 @@ public class Counter {
 
 	final public static byte [] long2byteBE(long l) {
 		byte []out = new byte[Long.BYTES];
+                
 		for (int i = 0; i < Long.BYTES; i++) {
-			out[i] = (byte)(l >> ((7 - i) << 3) & 0xFF);
+			out[i] = (byte)(l >>> ((7 - i) << 3) & 0xFF);
 		}
 		return out;
 	}
@@ -20,7 +21,7 @@ public class Counter {
         final public static long byte2long(byte[] bytes) {
             long result = 0;
             for (byte b : bytes) {
-                result = result << 8 | b;
+                result = result << 8 | (b & 0xFF);
             }
             return result;
         }
