@@ -1,10 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-package last;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,7 +37,8 @@ public class Client {
     private BufferedReader in=null, sin=null; 
     private OutputStreamWriter out=null;
     private String state="WAITING";
-    private byte[] key, ctr;
+    private byte[] key;
+    private Counter ctr;
     private String dwnl="";
     public Key pubKey;
     protected String id;
@@ -87,7 +81,15 @@ public class Client {
             else {
                 System.out.println("PROCESSIN'");
                 try {
-                    input=in.readLine();//from socket
+                    Thread.sleep(1000);
+                    input="";
+                    while(in.ready())
+                    {
+                        char[] b = new char[256];
+                        int n = in.read(b);
+                        input+=new String(b,0,n);
+                    }
+                    //input=in.readLine();//from socket
                     processServerInput(input);
                     //System.out.println(input+" received.");
                     //state="WAITING";
@@ -140,12 +142,12 @@ public class Client {
             {
                 System.out.println(i+": "+str[i]+".");
             }
-            ctr=str[2].getBytes();
+            ctr=new Counter(str[2].getBytes());
             System.out.println(str[2]+"is the string.");
-            System.out.println("pre-counter: "+new String(ctr));
+            System.out.println("pre-counter: "+ctr.getString());
             System.out.println("pre-counter: "+ctr);
-            ctr=Crypto.addOne(ctr);
-            System.out.println("post-counter: "+new String(ctr));
+            ctr.inc();
+            System.out.println("post-counter: "+ctr.getString());
             System.out.println("post-counter: "+ctr);
         }
         else if (str[0].equals("UPLD")) {
@@ -168,8 +170,10 @@ public class Client {
                 //upload file here...
                 String fileName="gitcat555.jpg";
                 File f=new File(fileName);
-                byte[] b=Crypto.encdecFile(key, ctr, fileName);
-                if (b.length==0)
+                FileInputStream fis=new FileInputStream(f);
+                byte[]b=new byte[(int)f.length()];
+                fis.read(b);
+                if (!f.exists() || f.length()==0)
                 {
                     System.out.println("file doesn't exist or is empty.");
                     return;
@@ -330,8 +334,12 @@ public class Client {
             toSend="RKEY";
         }
         else if (str.equals("init")) {
-            id=new String(Crypto.randByteStr(4));
-            key=Crypto.randByteStr(32);
+            Random r=new Random();
+            byte[] bi=new byte[4];
+            key=new byte[32];
+            r.nextBytes(bi);
+            r.nextBytes(key);
+            id=new String(bi);
             System.out.println(new String(key)+" is the key.");
             toSend="INIT     "+id+"     "+encryptRSA(key, Server.pubKey);//our code encrypted by RSA with server's public code
         }

@@ -1,8 +1,7 @@
-package last;
-
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -15,32 +14,31 @@ import java.net.Socket;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 
-/**
- *
- * @author gil
- */
 public class ServerThread extends Thread{
     static final int MAX_STR_SIZE=50000;
     static int num=0;
     protected Socket socket;
-    private byte[]key, ctr;
+    private byte[]key;
     protected String id;
     public Key pubKey, privKey;
     public String[] files;
     private File folder=new File("./server-files");
+    private Crypto cr;
+    private Counter ctr;
     public ServerThread(Socket clientSocket) {
         this.socket=clientSocket;
+        Random r=new Random();
+        ctr=new Counter(r.nextLong());
+        key=new byte[32];
+        r.nextBytes(key);
+        cr=new Crypto(key, ctr);
     }
     
     public void run() {
@@ -83,10 +81,9 @@ public class ServerThread extends Thread{
                             id=slp[1];
                             key=Server.decryptRSA(slp[2], Server.privKey);
                             System.out.println(new String(key)+" is the key.");
-                            ctr=Crypto.randByteStr(8);
-                            System.out.println(new String(ctr)+" is the ctr.");
+                            System.out.println(ctr.getString()+" is the ctr.");
                             String encMsg="CONF";//encrypt that
-                            out.write("ENCR     "+id+"     "+new String(ctr)+"     "+encMsg+"\n");
+                            out.write("ENCR     "+id+"     "+ctr.getString()+"     "+encMsg+"\n");
                             out.flush();
                         }
                         else if (slp[0].equals("UPLD")) {
@@ -117,7 +114,10 @@ public class ServerThread extends Thread{
                             {
                                 File f=new File("server-files/"+fileName);
                                 if (f.exists()) {
-                                    byte[] b=Crypto.encdecFile(key, ctr, fileName);
+                                    FileInputStream fis=new FileInputStream(f);
+                                    byte[] b=new byte[(int)f.length()];
+                                    fis.read(b);
+                                    fis.close();
                                     String toSend="DATA     "+fileName+"     "+new String(b)+"\n";
                                     out.write(toSend+"\n");
                                 }
@@ -131,7 +131,7 @@ public class ServerThread extends Thread{
                             String fileName=slp[1];
                             String data=slp[2];
                             FileOutputStream fos=new FileOutputStream(new File("server-files/"+fileName));
-                            byte[] b=Crypto.crypto(key, ctr, data.getBytes());
+                            byte[] b=data.getBytes();
                             fos.write(b);
                             fos.close();
                         }
@@ -140,8 +140,6 @@ public class ServerThread extends Thread{
                     //out.flush();
                 }
             } catch (IOException ex) {
-                Logger.getLogger(ServerThread.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (NoSuchAlgorithmException ex) {
                 Logger.getLogger(ServerThread.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
@@ -281,7 +279,7 @@ public class ServerThread extends Thread{
     }
     public boolean isSanitized(String fileName) {
         //for the file name, we are allowing letters, numbers, and dots only.
-        Pattern p= Pattern.compile("[a-z0-9.]", Pattern.CASE_INSENSITIVE);
+        Pattern p= Pattern.compile("[a-z0-9/.]", Pattern.CASE_INSENSITIVE);
         Matcher m= p.matcher(fileName);
         return m.find();
     }
