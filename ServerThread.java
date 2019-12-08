@@ -147,7 +147,7 @@ public class ServerThread extends Thread{
                     else if (cmd.equals("LIST")) {
                         File dir=new File("server-files");
                         String[] children=dir.list();
-                        if (children==null)
+                        if (children==null || children.length==0)
                         {
                             System.out.println("empty");
                             cr.encMsg(out, "LISTNONE".getBytes());
@@ -156,6 +156,7 @@ public class ServerThread extends Thread{
                         {
                             String answer="";
                             for (int i=0;i<children.length;i++) {
+                                System.out.println("list"+i);
                                 answer+=children[i];
                             }
                             int len=4+answer.getBytes().length;

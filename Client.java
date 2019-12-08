@@ -101,10 +101,23 @@ public class Client {
                         cr=new Crypto(key, new Counter(0));
                         byte[] msg=cr.decMsg(in);
                         ByteArrayInputStream inp=new ByteArrayInputStream(msg);
-                        byte[]cmd=new byte[4];
-                        inp.read(cmd);
-                        if (new String(cmd).equals("CONF")) {
+                        byte[]cmnd=new byte[4];
+                        inp.read(cmnd);
+                        String cmd=new String(cmnd);
+                        if (cmd.equals("CONF")) {
                             System.out.println("OK");
+                        }
+                        else if (cmd.equals("LIST")) {
+                            inp.read(cmnd);
+                            cmd=new String(cmnd);
+                            if (cmd.equals("NONE")) {
+                                System.out.println("no files");
+                            }
+                            else {
+                                cmnd=new byte[msg.length-4];
+                                inp.read(cmnd);
+                                System.out.println("files: "+new String(cmnd));
+                            }
                         }
                         else if (cmd.equals("UPLD")) {
                             
