@@ -5,6 +5,7 @@
  * and open the template in the editor.
  */
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
@@ -19,6 +20,7 @@ import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -36,7 +38,7 @@ public class Crypto {
 	private Counter ctr;
 
 	// Crypto(long k, Counter c) {
-	// 	key = Counter.long2byteBE(k);
+	// 	key = Utility.long2byteBE(k);
 	// 	ctr = c;
 	// }
 
@@ -73,38 +75,67 @@ public class Crypto {
 		ctr.inc();
 		return d.digest();
 	}
-        
-        final public void encMsg(OutputStream out, byte[] msg) {
-            try {
-                byte[] c=ctr.getBytes();
-                byte[] b=crypt(msg);
-                long len=b.length;
-                out.write("ENCR".getBytes());
-                out.write(c);
-                out.write(Counter.long2byteBE(len));
-                out.write(b);
-                out.flush();
-            } catch (IOException ex) {
-                System.out.println(ex);
-            }
-        }
+
+	final public void encMsg(OutputStream out, byte[] msg) {
+		try {
+			byte[] c=ctr.getBytes();
+			byte[] b=crypt(msg);
+			long len=b.length;
+			out.write("ENCR".getBytes());
+			out.write(c);
+			out.write(Utility.long2byteBE(len));
+			out.write(b);
+			out.flush();
+		} catch (IOException ex) {
+			System.out.println(ex);
+		}
+	}
 
 	final public void encMsg(OutputStream out, byte[][] msg) {
 		encMsg(out,Utility.combBytes(msg));
 	}
 
-        final public byte[] decMsg(InputStream in) {
-            long msgCtr, len;
-            try {
-                msgCtr = Counter.byte2long(Utility.readBytes(in, 8));
-                ctr=new Counter(msgCtr);
-                len = Counter.byte2long(Utility.readBytes(in, 8));
-                return crypt(Utility.readBytes(in, (int)len));
-            } catch (IOException ex) {
-                System.out.println("decMsg failure");
-            }
-            return null;
-        }
+	final public byte[] decMsg(InputStream in, boolean setCtr) throws Exception {
+		try {
+			final long msgCtr = Utility.readLong(in);
+			if (setCtr) {
+				ctr = new Counter(msgCtr);
+			} else if (msgCtr != ctr.get()) {
+				// System.err.println("Counters out of sync, reset the connection");
+				throw new Exception("CTR OUT OF SYNC");
+			}
+			final long len = Utility.readLong(in);
+			return crypt(Utility.readBytes(in, (int)len));
+		} catch (IOException ex) {
+			System.out.println("decMsg failure");
+		}
+		return null;
+	}
+
+	final public byte[] decMsg(InputStream in) throws Exception {
+		return decMsg(in,false);
+	}
+
+	final public ByteArrayInputStream decMsgStream(InputStream in, boolean setCtr) throws Exception {
+		return new ByteArrayInputStream(decMsg(in,setCtr));
+	}
+
+	final public ByteArrayInputStream decMsgStream(InputStream in) throws Exception {
+		return decMsgStream(in,false);
+	}
+
+	final public ByteArrayInputStream decResponse(InputStream in, boolean setCtr) throws Exception {
+		final String cmd = Utility.readCommand(in);
+		if (!cmd.equals("ENCR")) {
+			System.err.println("Got unencrypted response when expecting encrypted response");
+			return null;
+		}
+		return decMsgStream(in,setCtr);
+	}
+
+	final public ByteArrayInputStream decResponse(InputStream in) throws Exception {
+		return decResponse(in,false);
+	}
 
 	final public byte[] crypt(byte []in) {
 		byte []pad = null;

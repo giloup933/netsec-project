@@ -10,6 +10,22 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Utility {
+	final public static byte [] long2byteBE(long l) {
+		byte []out = new byte[Long.BYTES];
+		for (int i = 0; i < Long.BYTES; i++) {
+			out[i] = (byte)(l >>> ((7 - i) << 3) & 0xFF);
+		}
+		return out;
+	}
+
+	final public static long byte2long(byte[] bytes) {
+		long result = 0;
+		for (byte b : bytes) {
+			result = result << 8 | (b & 0xFF);
+		}
+		return result;
+	}
+
 	final public static String hexPrint(byte[] bytes) {
 		String result = "";
 		for (byte b : bytes) {
@@ -47,11 +63,30 @@ public class Utility {
             return false;
         }
         
-        final public static byte[] readBytes (InputStream in, int len) throws IOException {
-            byte[] b=new byte[len];
-            in.read(b, 0, len);
-            return b;
-        }
+	// final public static byte[] readBytes (InputStream in, int len) throws IOException {
+	// 	byte[] b=new byte[len];
+	// 	in.read(b, 0, len);
+	// 	return b;
+	// }
+
+	// A more aggressive function
+	final public static byte[] readBytes (InputStream in, int len) throws Exception {
+		int off = 0;
+		byte[] b=new byte[len];
+		while (off < len) {
+			Thread.sleep(10);
+			off += in.read(b, off, len-off);
+		}
+		return b;
+	}
+
+	final public static String readCommand(InputStream in) throws Exception {
+		return new String(readBytes(in,4));
+	}
+
+	final public static long readLong(InputStream in) throws Exception {
+		return byte2long(readBytes(in,8));
+	}
 
 	final public static byte[] combBytes(byte [][]bytes) {
 		// int len = 0;
@@ -73,5 +108,4 @@ public class Utility {
 		new Random().nextBytes(x);
 		System.out.println(hexPrint(x));
 	}
-        
 }

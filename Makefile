@@ -1,9 +1,14 @@
 %.class: %.java
 	javac $< # -o $@
 
-all: proj.jar
+all: proj.jar client-files server-files
 # make && java -cp proj.jar Server
 # (echo key; echo init; echo dwnl README.md; echo quit) | java -cp proj.jar Client
+
+client-files:
+	mkdir client-files
+server-files:
+	mkdir server-files
 
 Counter.class: Utility.class
 Crypto.class: Counter.class

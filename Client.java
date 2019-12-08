@@ -19,6 +19,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.KeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.security.SecureRandom;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,187 +35,140 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class Client {
     static final int PORT=3421;
-    private Socket socket=null;
-    private BufferedReader sin=null;
-    private InputStream in=null; 
-    private OutputStream out=null;
-    private String state="WAITING";
-    private byte[] key=new byte[32];
+    private Socket socket;
+    private BufferedReader sin;
+    private InputStream in;
+    private OutputStream out;
+    private String state;
+    private byte[] key = null;
     private Key pubKey;
     private Crypto cr;
-    protected boolean awaits_dwnl=false;
+	private Counter ctr;
+	SecureRandom random;
     public Client(String addr) throws Exception {
-        initCon(addr);
+		random = new SecureRandom();
+		socket = new Socket(InetAddress.getByName(addr), PORT);
+		sin = new BufferedReader(new InputStreamReader(System.in));
+		in = socket.getInputStream();
+		out = socket.getOutputStream();
+		state = "WAITING";
     }
-    public void initCon(String addr) throws Exception {
-        try {
-            socket=new Socket(InetAddress.getByName(addr), PORT);
-            sin=new BufferedReader(new InputStreamReader(System.in));
-            in=socket.getInputStream();
-            out=socket.getOutputStream();
-        }
-        catch (Exception e) {
-            System.out.println(e);
-            exit(-1);
-        }
-        Loop();
-    }
+
     public void Loop() throws Exception{
         String input="";
         String input0="";
         while (true) {
-            if (state.equals("WAITING"))
-            {
-                System.out.println("WAITIN'");
-                    input0=sin.readLine();//terminal input
-                    processUserInput(input0);
-                    input0="";
-            }
-            
-            else {
-                System.out.println("PROCESSIN'");
-                    Thread.sleep(1000);
-                    input="";
-                    byte[] b=new byte[4];
-                    in.read(b, 0, 4);
-                    String command=new String(b);
-                    if (command.equals("QUIT"))
-                    {
-                        closeCon();
-                    }
-                    else if (command.equals("SKEY"))
-                    {
-                        System.out.println(System.getProperty("user.dir"));
-                        b=new byte[8];
-                        in.read(b, 0, 8);
-                        System.out.println(Utility.hexPrint(b));
-                        int len=(int)Counter.byte2long(b);
-                        System.out.println(len);
-                        byte[] pubKey1=new byte[len];
-                        in.read(pubKey1, 0, len);
-                        System.out.println("key: "+Utility.hexPrint(pubKey1));
-                        pubKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(pubKey1));
-                        state="WAITING";
-                    }
-                    else if (command.equals("ENCR"))
-                    {
-                        cr=new Crypto(key, new Counter(0));
-                        byte[] msg=cr.decMsg(in);
-                        ByteArrayInputStream inp=new ByteArrayInputStream(msg);
-                        byte[]cmd=new byte[4];
-                        inp.read(cmd);
-                        if (new String(cmd).equals("CONF")) {
-                            System.out.println("OK");
-                        }
-                        else if (new String(cmd).equals("UPLD")) {
-                            
-                        }
-                        // else if (cmd.equals("DWNL")) {
-                        //     byte[] data = new byte[inp.available()];
-						// 	inp.read(data);
-						// 	System.out.println
-                        // }
-                        else if (new String(cmd).equals("DATA")) {
-							int len=(int)Counter.byte2long(Utility.readBytes(inp,8));
-							String fileName=new String(Utility.readBytes(inp,len));
-							len=(int)Counter.byte2long(Utility.readBytes(inp,8));
-							File f=new File("client-files/"+fileName);
-							System.out.println("file name length: "+len);
-							System.out.println("filename is: " + fileName);
-							System.out.println("file length: "+len);
-							System.out.println("file is: "+f);
+			System.out.println("Enter command: ");
+			input0=sin.readLine();//terminal input
+			processUserInput(input0);
+			input0="";
+		}
+	}
 
-							FileOutputStream fos=new FileOutputStream(f);
-							fos.write(Utility.readBytes(inp,len));
-							fos.close();
-							// cr.encMsg(out, "SUCC".getBytes());
-                            // byte[] aux=new byte[4];
-                            // inp.read(aux);
-                            // int len=(int)Counter.byte2long(aux);
-                            // System.out.println("file name length: "+len);
-                            // aux=new byte[len];
-                            // inp.read(aux);
-                            // String fileName=new String(aux);
-                            // aux=new byte[4];
-                            // inp.read(aux);
-                            // len=(int)Counter.byte2long(aux);
-                            // System.out.println("file length: "+len);
-                            // aux=new byte[len];
-                            // inp.read(aux);
-                            // File f=new File("client-files/"+fileName);
-                            // FileOutputStream fos=new FileOutputStream(f);
-                            // fos.close();
-                            // fos.write(aux);
-                        }
-                        state="WAITING";
-                    }
-                }
-            }
-        }
-    public void processUserInput(String str) throws IOException {
-        state="PROCESSING";
-        String toSend="";
+    public void processUserInput(String str) throws Exception {
+        // state="PROCESSING";
+        // String toSend="";
+		if (str == null) {
+			str = "quit";
+		}
         String[] spl=str.split(" ");
         if (str.equals("quit")) {
             out.write("QUIT".getBytes());
+			final String command = Utility.readCommand(in);
+			if (!command.equals("QUIT")) {
+				System.err.println("Unexpected response to QUIT");
+			}
+			closeCon();
         }
         else if (spl[0].equals("list")) {
             cr.encMsg(out, "LIST".getBytes());
+			System.out.println(cr.decResponse(in));
         }
         else if (str.equals("key")) {
             out.write("RKEY".getBytes());
+			out.flush();
+			// Thread.sleep(100);
+			final String command = Utility.readCommand(in);
+			if (command.equals("SKEY")) {
+				int len=(int)Utility.readLong(in);
+				byte[] pubKeyBuf = Utility.readBytes(in,len);
+				System.out.println("key length: " + len);
+				System.out.println("key (hex): " + Utility.hexPrint(pubKeyBuf));
+				pubKey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(pubKeyBuf));
+			}
         }
         else if (str.equals("init")) {
-            Random r=new Random();
-            key=new byte[32];
-            r.nextBytes(key);
+            // byte []key = Crypto.genkey(random);
+            key = Crypto.genkey(random);
+			cr = new Crypto(key, null);
             System.out.println(Utility.hexPrint(key)+" is the key.");
             byte[] ek=encryptRSA(key, pubKey);
             long len=ek.length;
             System.out.println(len);
-            toSend="INIT"+ek.length;//our code encrypted by RSA with server's public code
+            // toSend="INIT"+ek.length;//our code encrypted by RSA with server's public code
             out.write(("INIT").getBytes());
-            out.write(Counter.long2byteBE(len));
+            out.write(Utility.long2byteBE(len));
             out.write(ek);
             out.flush();
             //System.out.print(encryptRSA(key, Server.pubKey).length);
-            System.out.println("init done");
-        }
+            System.out.println("init sent");
+			ByteArrayInputStream dec = cr.decResponse(in,true);
+			final String decmd = Utility.readCommand(dec);
+			if (decmd.equals("CONF")) {
+				System.out.println("Session initialized");
+			} else {
+				System.err.println("INIT unexpected response " + decmd);
+			}
+		}
         else if (spl[0].equals("upld")) {
             String fileName=spl[1];
             byte[] file=Utility.getFile(fileName);
-            if (file==null)
-            {
+            if (file==null) {
                 return;
             }
 			System.out.println("Uploading " + spl[1]);
             int len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
             ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
-            stream.write("UPLD".getBytes());
-            stream.write(Counter.long2byteBE(fileName.getBytes().length));
-            stream.write(fileName.getBytes());
-            stream.write(Counter.long2byteBE(file.length));
-            stream.write(file);
-            cr.encMsg(out, stream.toByteArray());
-            System.out.println(Utility.hexPrint(stream.toByteArray()));
-        }
-        else if (spl[0].equals("dwnl")) {
+            cr.encMsg(out, new byte[][]{
+					"UPLD".getBytes()
+					,Utility.long2byteBE(fileName.getBytes().length)
+					,fileName.getBytes()
+					,Utility.long2byteBE(file.length)
+					,file
+				});
+
+			ByteArrayInputStream dec = cr.decResponse(in);
+			final String decmd = Utility.readCommand(dec);
+			if (decmd.equals("SUCC")) {
+				System.out.println("Upload successful");
+			} else if (decmd.equals("FAIL")) {
+				System.out.println("UPLD FAILURE");
+			} else {
+				System.err.println("UPLD unexpected response " + decmd);
+			}
+        } else if (spl[0].equals("dwnl")) {
             String fileName=spl[1];
-            // int len=fileName.getBytes().length+"DWNL".getBytes().length+4;
-            // ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
-            // stream.write("DWNL".getBytes());
-            // stream.write(fileName.getBytes().length);
-            // stream.write(fileName.getBytes());
-            // cr.encMsg(out, stream.toByteArray());
 			cr.encMsg(out, new byte[][]{"DWNL".getBytes(),fileName.getBytes()});
-        }
-        else {
+			// cr=new Crypto(key, new Counter(0));
+
+			ByteArrayInputStream dec = cr.decResponse(in);
+			final String decmd = Utility.readCommand(dec);
+			if (decmd.equals("DATA")) {
+				FileOutputStream fos=new FileOutputStream("client-files/"+fileName);
+				fos.write(Utility.readBytes(dec,dec.available()));
+				fos.close();
+				System.out.println("Download successful (now verify the file)");
+			} else if (decmd.equals("FAIL")) {
+				System.out.println("DWNL FAILURE");
+			} else {
+				System.err.println("DWNL unexpected response " + decmd);
+			}
+        } else {
             //invalid, ignore.
-            state="WAITING";
             return;
         }
     }
-    
+
     public byte[] encryptRSA(byte[] plaintext, Key pubKey) {
         Cipher encryptCipher = null;
         try {
@@ -253,9 +207,6 @@ public class Client {
         }
     }
     public static void main(String[] args) throws Exception {
-        if (args.length<2)
-            new Client("127.0.0.1");
-        else
-            new Client(args[0]);
+		new Client(args.length<2 ? "127.0.0.1" : args[0]).Loop();
     }
 }

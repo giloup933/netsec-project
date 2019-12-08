@@ -60,9 +60,10 @@ public class ServerThread extends Thread{
                 byte[] b=new byte[4];
                 in.read(b, 0, 4);
                 String command=new String(b);
-                System.out.println(command+"^#*%&U^YU#$$U");
+                System.out.println(command+" RECEIVED");
                 if (command.equals("QUIT"))
                 {
+					out.write("QUIT".getBytes());
                     System.out.println("Thread closed.");
                     socket.close();
                     System.exit(0);
@@ -70,11 +71,11 @@ public class ServerThread extends Thread{
                 else if (command.equals("RKEY"))
                 {
                     long len=Server.pubKey.getEncoded().length;
-                    System.out.println(Utility.hexPrint(Counter.long2byteBE(len)));
+                    System.out.println(Utility.hexPrint(Utility.long2byteBE(len)));
                     System.out.println("key: "+Utility.hexPrint(Server.pubKey.getEncoded()));
                     System.out.println(Server.pubKey.getEncoded().length);
                     out.write(("SKEY").getBytes());
-                    out.write(Counter.long2byteBE(len));
+                    out.write(Utility.long2byteBE(len));
                     out.write(Server.pubKey.getEncoded());
                     out.flush();
                 }
@@ -82,7 +83,7 @@ public class ServerThread extends Thread{
                 {
                     b=new byte[8];
                     in.read(b, 0, 8);
-                    int len=(int)Counter.byte2long(b);
+                    int len=(int)Utility.byte2long(b);
                     System.out.println(len);
                     b=new byte[len];
                     in.read(b, 0, len);
@@ -96,21 +97,22 @@ public class ServerThread extends Thread{
                 }
                 else if (command.equals("ENCR"))
                 {
-                    byte[] msg=cr.decMsg(in);
-                    System.out.println(Utility.hexPrint(msg));
-                    ByteArrayInputStream inp=new ByteArrayInputStream(msg);
-                    byte[] aux=new byte[4];
-                    inp.read(aux);
-                    String cmd=new String(aux);
-                    System.out.println(cmd+"!@!!!!");
+                    ByteArrayInputStream inp = cr.decMsgStream(in);
+                    // System.out.println(Utility.hexPrint(msg));
+                    // ByteArrayInputStream inp=new ByteArrayInputStream(msg);
+                    // byte[] aux=Utility.readBytes(inp,8);
+                    // inp.read(aux);
+                    // String cmd=new String(aux);
+                    // System.out.println("Encrypted "+cmd+" received");
+					String cmd = Utility.readCommand(inp);
                     if (cmd.equals("UPLD")) {
-                        int len=(int)Counter.byte2long(Utility.readBytes(inp,8));
-                        String fileName=new String(Utility.readBytes(inp,len));
-                        len=(int)Counter.byte2long(Utility.readBytes(inp,8));
-                        File f=new File("server-files/"+fileName);
+                        int len=(int)Utility.byte2long(Utility.readBytes(inp,8));
                         System.out.println("file name length: "+len);
+                        String fileName=new String(Utility.readBytes(inp,len));
 						System.out.println("filename is: " + fileName);
+                        len=(int)Utility.byte2long(Utility.readBytes(inp,8));
                         System.out.println("file length: "+len);
+                        File f=new File("server-files/"+fileName);
 						System.out.println("file is: "+f);
 
                         FileOutputStream fos=new FileOutputStream(f);
@@ -141,18 +143,19 @@ public class ServerThread extends Thread{
                         // len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
                         // ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
                         // stream.write("DATA".getBytes());
-                        // stream.write(Counter.long2byteBE(fileName.getBytes().length));
+                        // stream.write(Utility.long2byteBE(fileName.getBytes().length));
                         // stream.write(fileName.getBytes());
-                        // stream.write(Counter.long2byteBE(file.length));
+                        // stream.write(Utility.long2byteBE(file.length));
                         // stream.write(file);
                         // cr.encMsg(out,file);
-						cr.encMsg(out,
-								  new byte[][]
-							{"DATA".getBytes()
-							 ,Counter.long2byteBE(fileName.length())
-							 ,fileName.getBytes()
-							 ,Counter.long2byteBE(file.length)
-							 ,file});
+						cr.encMsg(out, new byte[][] {"DATA".getBytes() ,file});
+						// cr.encMsg(out,
+						// 		  new byte[][]
+						// 	{"DATA".getBytes()
+						// 	 ,Utility.long2byteBE(fileName.length())
+						// 	 ,fileName.getBytes()
+						// 	 ,Utility.long2byteBE(file.length)
+						// 	 ,file});
                     }
                     else if (cmd.equals("LIST")) {
                         File dir=new File("server-files");
@@ -186,7 +189,7 @@ public class ServerThread extends Thread{
                     Thread.sleep(10);
                     while (in.available()<4)
                     {
-                        Thread.sleep(1000);
+                        Thread.sleep(100);
                         //System.out.println(in.available());
                     }
                 } catch (InterruptedException ex) {
@@ -194,7 +197,7 @@ public class ServerThread extends Thread{
                 }
             }
         }
-        catch (IOException e) {
+        catch (Exception e) {
             System.out.println(e+"...");
         }
         System.out.println("left");
