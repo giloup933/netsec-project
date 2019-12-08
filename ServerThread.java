@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -53,13 +54,13 @@ public class ServerThread extends Thread{
             return;
         }
         String line;
-        byte[] b=new byte[4];
         boolean ct=true;
         try {
             while (true) {
+                byte[] b=new byte[4];
                 in.read(b, 0, 4);
                 String command=new String(b);
-                System.out.println(command);
+                System.out.println(command+"^#*%&U^YU#$$U");
                 if (command.equals("QUIT"))
                 {
                     System.out.println("Thread closed.");
@@ -86,6 +87,7 @@ public class ServerThread extends Thread{
                     b=new byte[len];
                     in.read(b, 0, len);
                     key=Server.decryptRSA(b, Server.privKey);
+                    System.out.println(Utility.hexPrint(key)+" is the key");
                     Random r=new Random();
                     long cntr=r.nextLong();
                     ctr=new Counter(cntr);
@@ -95,23 +97,29 @@ public class ServerThread extends Thread{
                 else if (command.equals("ENCR"))
                 {
                     byte[] msg=cr.decMsg(in);
+                    System.out.println(Utility.hexPrint(msg));
+                    ByteArrayInputStream inp=new ByteArrayInputStream(msg);
                     byte[] aux=new byte[4];
-                    in.read(aux, 0, 4);
+                    inp.read(aux);
                     String cmd=new String(aux);
+                    System.out.println(cmd+"!@!!!!");
                     if (cmd.equals("UPLD")) {
-                        in.read(aux, 0, 4);
+                        inp.read(aux);
                         int len=(int)Counter.byte2long(aux);
+                        System.out.println("file name length: "+len);
                         aux=new byte[len];
-                        in.read(aux, 0, len);
+                        inp.read(aux);
                         String fileName=new String(aux);
-                        in.read(aux, 0, 4);
+                        aux=new byte[4];
+                        inp.read(aux);
                         len=(int)Counter.byte2long(aux);
+                        System.out.println("file length: "+len);
                         aux=new byte[len];
-                        in.read(aux, 0, len);//this is the file
+                        inp.read(aux);
                         File f=new File("server-files/"+fileName);
                         FileOutputStream fos=new FileOutputStream(f);
-                        fos.close();
                         fos.write(aux);
+                        fos.close();
                     }
                     else if (cmd.equals("DWNL")) {
                         in.read(aux, 0, 4);
@@ -158,24 +166,15 @@ public class ServerThread extends Thread{
                         }
                     }
                 }
-                else if (command.equals("DATA"))
-                {
-                    b=new byte[4];
-                    in.read(b, 1, 4);
-                    System.out.println("length="+new String(b));
-                    int length=Integer.decode(new String(b));
-                    b=new byte[length];
-                    in.read(b, 1, length);
-                    //the message is in b, decrypt it
-                }
                 try {
                     Thread.sleep(10);
                     while (in.available()<4)
                     {
+                        Thread.sleep(1000);
                         //System.out.println(in.available());
                     }
                 } catch (InterruptedException ex) {
-                    Logger.getLogger(ServerThread.class.getName()).log(Level.SEVERE, null, ex);
+                    //Logger.getLogger(ServerThread.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }

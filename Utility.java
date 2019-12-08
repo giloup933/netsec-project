@@ -47,7 +47,7 @@ public class Utility {
         }
         
         final public static byte[] readBytes (InputStream in, int len) throws IOException {
-            byte[] b=new byte[8];
+            byte[] b=new byte[len];
             in.read(b, 0, len);
             return b;
         }

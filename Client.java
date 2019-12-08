@@ -40,16 +40,13 @@ public class Client {
     private OutputStream out=null;
     private String state="WAITING";
     private byte[] key=new byte[32];
-    private Counter ctr;
-    private String dwnl="";
     private Key pubKey;
     private Crypto cr;
-    public String fileName="";
     protected boolean awaits_dwnl=false;
-    public Client(String addr) {
+    public Client(String addr) throws Exception {
         initCon(addr);
     }
-    public void initCon(String addr) {
+    public void initCon(String addr) throws Exception {
         try {
             socket=new Socket(InetAddress.getByName(addr), PORT);
             sin=new BufferedReader(new InputStreamReader(System.in));
@@ -62,26 +59,20 @@ public class Client {
         }
         Loop();
     }
-    public void Loop() {
+    public void Loop() throws Exception{
         String input="";
         String input0="";
         while (true) {
             if (state.equals("WAITING"))
             {
                 System.out.println("WAITIN'");
-                try {
                     input0=sin.readLine();//terminal input
                     processUserInput(input0);
                     input0="";
-                }
-                catch (Exception e) {
-                    System.out.println(e);
-                    //closeCon();
-                }
             }
+            
             else {
                 System.out.println("PROCESSIN'");
-                try {
                     Thread.sleep(1000);
                     input="";
                     byte[] b=new byte[4];
@@ -93,6 +84,7 @@ public class Client {
                     }
                     else if (command.equals("SKEY"))
                     {
+                        System.out.println(System.getProperty("user.dir"));
                         b=new byte[8];
                         in.read(b, 0, 8);
                         System.out.println(Utility.hexPrint(b));
@@ -106,27 +98,34 @@ public class Client {
                     }
                     else if (command.equals("ENCR"))
                     {
+                        cr=new Crypto(key, new Counter(0));
                         byte[] msg=cr.decMsg(in);
-                        if (msg.equals("CONF")) {
+                        ByteArrayInputStream inp=new ByteArrayInputStream(msg);
+                        byte[]cmd=new byte[4];
+                        inp.read(cmd);
+                        if (new String(cmd).equals("CONF")) {
+                            System.out.println("OK");
+                        }
+                        else if (cmd.equals("UPLD")) {
                             
                         }
-                        else if (msg.equals("UPLD")) {
+                        else if (cmd.equals("DWNL")) {
                             
                         }
-                        else if (msg.equals("DWNL")) {
-                            
-                        }
-                        else if (msg.equals("DATA")) {
+                        else if (cmd.equals("DATA")) {
                             byte[] aux=new byte[4];
-                            in.read(aux, 0, 4);
+                            inp.read(aux);
                             int len=(int)Counter.byte2long(aux);
+                            System.out.println("file name length: "+len);
                             aux=new byte[len];
-                            in.read(aux, 0, len);
+                            inp.read(aux);
                             String fileName=new String(aux);
-                            in.read(aux, 0, 4);
+                            aux=new byte[4];
+                            inp.read(aux);
                             len=(int)Counter.byte2long(aux);
+                            System.out.println("file length: "+len);
                             aux=new byte[len];
-                            in.read(aux, 0, len);//this is the file
+                            inp.read(aux);
                             File f=new File("client-files/"+fileName);
                             FileOutputStream fos=new FileOutputStream(f);
                             fos.close();
@@ -134,31 +133,18 @@ public class Client {
                         }
                         state="WAITING";
                     }
-                    else if (command.equals("DATA"))
-                    {
-                        b=new byte[4];
-                        in.read(b, 1, 4);
-                        System.out.println("length="+new String(b));
-                        int length=Integer.decode(new String(b));
-                        b=new byte[length];
-                        in.read(b, 1, length);
-                        //the message is in b, decrypt it
-                    }
-                }
-                catch (Exception e) {
-                    System.out.println("connection abandonned..");
-                    System.out.println(e);
-                    closeCon();
                 }
             }
         }
-    }
     public void processUserInput(String str) throws IOException {
         state="PROCESSING";
         String toSend="";
         String[] spl=str.split(" ");
         if (str.equals("quit")) {
             out.write("QUIT".getBytes());
+        }
+        else if (spl[0].equals("list")) {
+            cr.encMsg(out, "LIST".getBytes());
         }
         else if (str.equals("key")) {
             out.write("RKEY".getBytes());
@@ -175,7 +161,9 @@ public class Client {
             out.write(("INIT").getBytes());
             out.write(Counter.long2byteBE(len));
             out.write(ek);
+            out.flush();
             //System.out.print(encryptRSA(key, Server.pubKey).length);
+            System.out.println("init done");
         }
         else if (spl[0].equals("upld")) {
             String fileName=spl[1];
@@ -192,6 +180,7 @@ public class Client {
             stream.write(file.length);
             stream.write(file);
             cr.encMsg(out, stream.toByteArray());
+            System.out.println(Utility.hexPrint(stream.toByteArray()));
         }
         else if (spl[0].equals("dwnl")) {
             String fileName=spl[1];
@@ -246,7 +235,7 @@ public class Client {
             System.out.println(i);
         }
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         if (args.length<2)
             new Client("127.0.0.1");
         else

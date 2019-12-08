@@ -13,6 +13,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -84,7 +85,7 @@ public class Crypto {
                 out.write(b);
                 out.flush();
             } catch (IOException ex) {
-                Logger.getLogger(Utility.class.getName()).log(Level.SEVERE, null, ex);
+                System.out.println(ex);
             }
         }
         
@@ -92,10 +93,11 @@ public class Crypto {
             long msgCtr, len;
             try {
                 msgCtr = Counter.byte2long(Utility.readBytes(in, 8));
+                ctr=new Counter(msgCtr);
                 len = Counter.byte2long(Utility.readBytes(in, 8));
-                return Utility.readBytes(in, (int)len);
+                return crypt(Utility.readBytes(in, (int)len));
             } catch (IOException ex) {
-                Logger.getLogger(Crypto.class.getName()).log(Level.SEVERE, null, ex);
+                System.out.println("decMsg failure");
             }
             return null;
         }
@@ -142,12 +144,15 @@ public class Crypto {
     //     return new byte[0];
     // }
 
-	final public static byte[] challenge(File file, int offset, int len) throws IOException {
+        final public static byte[] challenge(File file, int offset, int len, byte []salt) throws IOException {
 		byte []b = new byte[len];
-		InputStream s = new FileInputStream(file);
-		s.read(b,offset,len);
+		MessageDigest i = digestInstance();
+		i.update(salt);
+		RandomAccessFile s = new RandomAccessFile(file,"r");
+		s.seek(offset);
+		s.read(b);
 		s.close();
-		return digest(b);
+		return i.digest(b);
 	}
 
 	public static void main(String[] args) {
