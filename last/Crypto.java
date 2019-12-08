@@ -1,4 +1,4 @@
-
+package last;
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -12,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -113,12 +114,15 @@ public class Crypto {
     //     return new byte[0];
     // }
 
-	final public static byte[] challenge(File file, int offset, int len) throws IOException {
+	final public static byte[] challenge(File file, int offset, int len, byte []salt) throws IOException {
 		byte []b = new byte[len];
-		InputStream s = new FileInputStream(file);
-		s.read(b,offset,len);
+		MessageDigest i = digestInstance();
+		i.update(salt);
+		RandomAccessFile s = new RandomAccessFile(file,"r");
+		s.seek(offset);
+		s.read(b);
 		s.close();
-		return digest(b);
+		return i.digest(b);
 	}
 
 	public static void main(String[] args) {
