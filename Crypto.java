@@ -88,7 +88,11 @@ public class Crypto {
                 System.out.println(ex);
             }
         }
-        
+
+	final public void encMsg(OutputStream out, byte[][] msg) {
+		encMsg(out,Utility.combBytes(msg));
+	}
+
         final public byte[] decMsg(InputStream in) {
             long msgCtr, len;
             try {

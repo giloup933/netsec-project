@@ -1,15 +1,18 @@
 %.class: %.java
 	javac $< # -o $@
 
-all: last.jar
+all: proj.jar
+# make && java -cp proj.jar Server
+# (echo key; echo init; echo dwnl README.md; echo quit) | java -cp proj.jar Client
 
-last/Crypto.class: last/Counter.class
-last/Client.class: last/Crypto.class last/Counter.class
-last/ServerThread.class: last/Crypto.class
-last/Server.class: last/Crypto.class last/ServerThread.class
+Counter.class: Utility.class
+Crypto.class: Counter.class
+Client.class: Crypto.class Counter.class
+ServerThread.class: Crypto.class
+Server.class: Crypto.class ServerThread.class
 
-last.jar: last/Client.class last/Server.class
-	jar cvf last.jar last
+proj.jar: Client.class Server.class
+	jar cvf proj.jar *.class
 
 clean:
-	rm last/*.class last.jar
+	rm *.class proj.jar

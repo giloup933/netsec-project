@@ -122,27 +122,42 @@ public class Client {
                         else if (cmd.equals("UPLD")) {
                             
                         }
-                        else if (cmd.equals("DWNL")) {
-                            
-                        }
-                        else if (cmd.equals("DATA")) {
-                            byte[] aux=new byte[4];
-                            inp.read(aux);
-                            int len=(int)Counter.byte2long(aux);
-                            System.out.println("file name length: "+len);
-                            aux=new byte[len];
-                            inp.read(aux);
-                            String fileName=new String(aux);
-                            aux=new byte[4];
-                            inp.read(aux);
-                            len=(int)Counter.byte2long(aux);
-                            System.out.println("file length: "+len);
-                            aux=new byte[len];
-                            inp.read(aux);
-                            File f=new File("client-files/"+fileName);
-                            FileOutputStream fos=new FileOutputStream(f);
-                            fos.close();
-                            fos.write(aux);
+                        // else if (cmd.equals("DWNL")) {
+                        //     byte[] data = new byte[inp.available()];
+						// 	inp.read(data);
+						// 	System.out.println
+                        // }
+                        else if (new String(cmd).equals("DATA")) {
+							int len=(int)Counter.byte2long(Utility.readBytes(inp,8));
+							String fileName=new String(Utility.readBytes(inp,len));
+							len=(int)Counter.byte2long(Utility.readBytes(inp,8));
+							File f=new File("client-files/"+fileName);
+							System.out.println("file name length: "+len);
+							System.out.println("filename is: " + fileName);
+							System.out.println("file length: "+len);
+							System.out.println("file is: "+f);
+
+							FileOutputStream fos=new FileOutputStream(f);
+							fos.write(Utility.readBytes(inp,len));
+							fos.close();
+							// cr.encMsg(out, "SUCC".getBytes());
+                            // byte[] aux=new byte[4];
+                            // inp.read(aux);
+                            // int len=(int)Counter.byte2long(aux);
+                            // System.out.println("file name length: "+len);
+                            // aux=new byte[len];
+                            // inp.read(aux);
+                            // String fileName=new String(aux);
+                            // aux=new byte[4];
+                            // inp.read(aux);
+                            // len=(int)Counter.byte2long(aux);
+                            // System.out.println("file length: "+len);
+                            // aux=new byte[len];
+                            // inp.read(aux);
+                            // File f=new File("client-files/"+fileName);
+                            // FileOutputStream fos=new FileOutputStream(f);
+                            // fos.close();
+                            // fos.write(aux);
                         }
                         state="WAITING";
                     }
@@ -185,24 +200,26 @@ public class Client {
             {
                 return;
             }
+			System.out.println("Uploading " + spl[1]);
             int len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
             ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
             stream.write("UPLD".getBytes());
-            stream.write(fileName.getBytes().length);
+            stream.write(Counter.long2byteBE(fileName.getBytes().length));
             stream.write(fileName.getBytes());
-            stream.write(file.length);
+            stream.write(Counter.long2byteBE(file.length));
             stream.write(file);
             cr.encMsg(out, stream.toByteArray());
             System.out.println(Utility.hexPrint(stream.toByteArray()));
         }
         else if (spl[0].equals("dwnl")) {
             String fileName=spl[1];
-            int len=fileName.getBytes().length+"DWNL".getBytes().length+4;
-            ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
-            stream.write("DWNL".getBytes());
-            stream.write(fileName.getBytes().length);
-            stream.write(fileName.getBytes());
-            cr.encMsg(out, stream.toByteArray());
+            // int len=fileName.getBytes().length+"DWNL".getBytes().length+4;
+            // ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
+            // stream.write("DWNL".getBytes());
+            // stream.write(fileName.getBytes().length);
+            // stream.write(fileName.getBytes());
+            // cr.encMsg(out, stream.toByteArray());
+			cr.encMsg(out, new byte[][]{"DWNL".getBytes(),fileName.getBytes()});
         }
         else {
             //invalid, ignore.
