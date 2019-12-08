@@ -104,31 +104,36 @@ public class ServerThread extends Thread{
                     String cmd=new String(aux);
                     System.out.println(cmd+"!@!!!!");
                     if (cmd.equals("UPLD")) {
-                        inp.read(aux);
-                        int len=(int)Counter.byte2long(aux);
-                        System.out.println("file name length: "+len);
-                        aux=new byte[len];
-                        inp.read(aux);
-                        String fileName=new String(aux);
-                        aux=new byte[4];
-                        inp.read(aux);
-                        len=(int)Counter.byte2long(aux);
-                        System.out.println("file length: "+len);
-                        aux=new byte[len];
-                        inp.read(aux);
+                        int len=(int)Counter.byte2long(Utility.readBytes(inp,8));
+                        String fileName=new String(Utility.readBytes(inp,len));
+                        len=(int)Counter.byte2long(Utility.readBytes(inp,8));
                         File f=new File("server-files/"+fileName);
+                        System.out.println("file name length: "+len);
+						System.out.println("filename is: " + fileName);
+                        System.out.println("file length: "+len);
+						System.out.println("file is: "+f);
+
                         FileOutputStream fos=new FileOutputStream(f);
-                        fos.write(aux);
+                        fos.write(Utility.readBytes(inp,len));
                         fos.close();
+						cr.encMsg(out, "SUCC".getBytes());
+						// aux = new byte[8];
+                        // inp.read(aux);
+                        // aux=new byte[len];
+                        // inp.read(aux);
+                        // aux=new byte[8];
+                        // inp.read(aux);
+                        // aux=new byte[len];
+                        // inp.read(aux);
                     }
                     else if (cmd.equals("DWNL")) {
                         in.read(aux, 0, 4);
                         int len=(int)Counter.byte2long(aux);
                         aux=new byte[len];
-                        in.read(aux, 0, len);
+                        in.read(aux);
                         String fileName=new String(aux);
                         if (!fileExists("server-files/"+fileName)) {
-                            
+                            // TODO?
                         }
                         byte[] file=Utility.getFile(fileName);
                         if (file==null)
@@ -138,9 +143,9 @@ public class ServerThread extends Thread{
                         len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
                         ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
                         stream.write("DATA".getBytes());
-                        stream.write(fileName.getBytes().length);
-                        stream.write(fileName.getBytes());
-                        stream.write(file.length);
+                        // stream.write(Counter.long2byteBE(fileName.getBytes().length));
+                        // stream.write(fileName.getBytes());
+                        // stream.write(Counter.long2byteBE(file.length));
                         stream.write(file);
                         cr.encMsg(out, stream.toByteArray());
                     }
@@ -165,6 +170,12 @@ public class ServerThread extends Thread{
                             cr.encMsg(out, stream.toByteArray());
                         }
                     }
+					else if (cmd.equals("STTR")) {
+						//STAT
+					}
+					else if (cmd.equals("CHAL")) {
+						//ANSR
+					}
                 }
                 try {
                     Thread.sleep(10);

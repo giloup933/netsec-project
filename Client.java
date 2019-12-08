@@ -172,12 +172,13 @@ public class Client {
             {
                 return;
             }
+			System.out.println("Uploading " + spl[1]);
             int len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
             ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
             stream.write("UPLD".getBytes());
-            stream.write(fileName.getBytes().length);
+            stream.write(Counter.long2byteBE(fileName.getBytes().length));
             stream.write(fileName.getBytes());
-            stream.write(file.length);
+            stream.write(Counter.long2byteBE(file.length));
             stream.write(file);
             cr.encMsg(out, stream.toByteArray());
             System.out.println(Utility.hexPrint(stream.toByteArray()));
