@@ -20,6 +20,7 @@ import java.security.spec.KeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -65,6 +66,47 @@ public class Client {
 		}
 	}
 
+	public void challengeServer(String fileName, long offset, long len) throws Exception {
+		File file = new File("client-files/"+fileName);
+		// long offset = random.nextLong(file.length());
+		// long len = random.nextLong(file.length()-offset);
+		byte []salt = new byte[32];
+		random.nextBytes(salt);
+		byte []chal = Crypto.challenge(file,(int)offset,(int)len,salt);
+		if (file==null) {
+			return;
+		}
+		System.out.println("Challenging " + fileName);
+		System.out.println(" at offset " + offset);
+		System.out.println(" of length " + len);
+		System.out.println(" with salt " + Utility.hexPrint(salt));
+		cr.encMsg(out, new byte[][]{
+				"CHAL".getBytes()
+				,Utility.long2byteBE(offset)
+				,Utility.long2byteBE(len)
+				,salt
+				,fileName.getBytes()
+			});
+
+		ByteArrayInputStream dec = cr.decResponse(in);
+		final String decmd = Utility.readCommand(dec);
+		if (decmd.equals("ANSR")) {
+			byte []response = Utility.readBytes(dec,dec.available());
+			System.out.println("Challenge answer is: " + Utility.hexPrint(chal));
+			System.out.println("Challenge response is: " + Utility.hexPrint(response));
+			if (Arrays.equals(chal,response)) {
+				System.out.println("Correct response");
+			} else {
+				System.out.println("Incorrect response");
+			}
+			System.out.println("Upload successful");
+		} else if (decmd.equals("FAIL")) {
+			System.out.println("CHAL FAILURE");
+		} else {
+			System.err.println("CHAL unexpected response " + decmd);
+		}
+	}
+
     public void processUserInput(String str) throws Exception {
         // state="PROCESSING";
         // String toSend="";
@@ -87,7 +129,6 @@ public class Client {
         else if (str.equals("key")) {
             out.write("RKEY".getBytes());
 			out.flush();
-			// Thread.sleep(100);
 			final String command = Utility.readCommand(in);
 			if (command.equals("SKEY")) {
 				int len=(int)Utility.readLong(in);
@@ -119,16 +160,13 @@ public class Client {
 			} else {
 				System.err.println("INIT unexpected response " + decmd);
 			}
-		}
-        else if (spl[0].equals("upld")) {
+		} else if (spl[0].equals("upld")) {
             String fileName=spl[1];
-            byte[] file=Utility.getFile(fileName);
+            byte[] file=Utility.getFile("client-files/"+fileName);
             if (file==null) {
                 return;
             }
 			System.out.println("Uploading " + spl[1]);
-            int len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
-            ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
             cr.encMsg(out, new byte[][]{
 					"UPLD".getBytes()
 					,Utility.long2byteBE(fileName.getBytes().length)
@@ -162,6 +200,36 @@ public class Client {
 				System.out.println("DWNL FAILURE");
 			} else {
 				System.err.println("DWNL unexpected response " + decmd);
+			}
+		} else if (spl[0].equals("chalpart")) {
+			String fileName=spl[1];
+			File file = new File("client-files/"+fileName);
+			long offset = random.nextInt((int)file.length());
+			long len = random.nextInt((int)(file.length()-offset));
+			challengeServer(fileName,offset,len);
+		} else if (spl[0].equals("chal")) {
+			String fileName=spl[1];
+			File file = new File("client-files/"+fileName);
+			challengeServer(fileName,0,file.length());
+        } else if (spl[0].equals("stat")) {
+            String fileName=spl[1];
+			cr.encMsg(out, new byte[][]{"STAT".getBytes(),fileName.getBytes()});
+			// cr=new Crypto(key, new Counter(0));
+
+			ByteArrayInputStream dec = cr.decResponse(in);
+			final String decmd = Utility.readCommand(dec);
+			if (decmd.equals("STTR")) {
+				System.out.println("File length: " + Utility.readLong(dec));
+				final byte []hash = Utility.readBytes(dec,dec.available());
+				System.out.println("File hash: " + Utility.hexPrint(hash));
+				// FileOutputStream fos=new FileOutputStream("client-files/"+fileName);
+				// fos.write(Utility.readBytes(dec,dec.available()));
+				// fos.close();
+				// System.out.println("Download successful (now verify the file)");
+			} else if (decmd.equals("FAIL")) {
+				System.out.println("STAT FAILURE");
+			} else {
+				System.err.println("STAT unexpected response " + decmd);
 			}
         } else {
             //invalid, ignore.

@@ -66,7 +66,8 @@ public class ServerThread extends Thread{
 					out.write("QUIT".getBytes());
                     System.out.println("Thread closed.");
                     socket.close();
-                    System.exit(0);
+					return;
+                    // System.exit(0);
                 }
                 else if (command.equals("RKEY"))
                 {
@@ -127,12 +128,24 @@ public class ServerThread extends Thread{
                         // inp.read(aux);
                         // aux=new byte[len];
                         // inp.read(aux);
-                    }
-                    else if (cmd.equals("DWNL")) {
+                    } else if (cmd.equals("CHAL")) {
+						long offset = Utility.readLong(inp);
+						long len = Utility.readLong(inp);
+						byte []salt = Utility.readBytes(inp,32);
+						String filename = new String(Utility.readBytes(inp,inp.available()));
+                        File f=new File("server-files/"+filename);
+						System.out.println("Got a challenge for " + filename);
+						System.out.println(" at offset " + offset);
+						System.out.println(" of length " + len);
+						System.out.println(" with salt " + Utility.hexPrint(salt));
+
+						byte []answer = Crypto.challenge(f,(int)offset,(int)len,salt);
+						cr.encMsg(out, new byte[][]{"ANSR".getBytes() ,answer});
+                    } else if (cmd.equals("DWNL")) {
                         byte []filenameBuf = new byte[inp.available()];
                         inp.read(filenameBuf);
-                        String fileName=new String(filenameBuf);
-                        if (!fileExists("server-files/"+fileName)) {
+                        String fileName="server-files/"+new String(filenameBuf);
+                        if (!fileExists(fileName)) {
                             // TODO?
                         }
                         byte[] file=Utility.getFile(fileName);
@@ -156,8 +169,37 @@ public class ServerThread extends Thread{
 						// 	 ,fileName.getBytes()
 						// 	 ,Utility.long2byteBE(file.length)
 						// 	 ,file});
-                    }
-                    else if (cmd.equals("LIST")) {
+                    } else if (cmd.equals("STAT")) {
+                        byte []filenameBuf = new byte[inp.available()];
+						String fileName = "server-files/" + new String(Utility.readBytes(inp,inp.available()));
+                        File file = new File(fileName);
+                        if (!fileExists(fileName)) {
+                            // TODO?
+                        }
+                        if (file==null)
+                        {
+                            return;
+                        }
+                        // len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
+                        // ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
+                        // stream.write("DATA".getBytes());
+                        // stream.write(Utility.long2byteBE(fileName.getBytes().length));
+                        // stream.write(fileName.getBytes());
+                        // stream.write(Utility.long2byteBE(file.length));
+                        // stream.write(file);
+                        // cr.encMsg(out,file);
+						cr.encMsg(out, new byte[][] {
+								"STTR".getBytes()
+								,Utility.long2byteBE(file.length())
+								,Crypto.digest(Utility.getFile(fileName))});
+						// cr.encMsg(out,
+						// 		  new byte[][]
+						// 	{"DATA".getBytes()
+						// 	 ,Utility.long2byteBE(fileName.length())
+						// 	 ,fileName.getBytes()
+						// 	 ,Utility.long2byteBE(file.length)
+						// 	 ,file});
+                    } else if (cmd.equals("LIST")) {
                         File dir=new File("server-files");
                         String[] children=dir.list();
                         if (children==null)
@@ -178,12 +220,6 @@ public class ServerThread extends Thread{
                             cr.encMsg(out, stream.toByteArray());
                         }
                     }
-					else if (cmd.equals("STTR")) {
-						//STAT
-					}
-					else if (cmd.equals("CHAL")) {
-						//ANSR
-					}
                 }
                 try {
                     Thread.sleep(10);
