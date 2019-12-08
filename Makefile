@@ -2,7 +2,10 @@
 	javac $< # -o $@
 
 all: proj.jar
+# make && java -cp proj.jar Server
+# (echo key; echo init; echo dwnl README.md; echo quit) | java -cp proj.jar Client
 
+Counter.class: Utility.class
 Crypto.class: Counter.class
 Client.class: Crypto.class Counter.class
 ServerThread.class: Crypto.class

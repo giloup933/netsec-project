@@ -1,3 +1,4 @@
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -51,6 +52,21 @@ public class Utility {
             in.read(b, 0, len);
             return b;
         }
+
+	final public static byte[] combBytes(byte [][]bytes) {
+		// int len = 0;
+		// for (byte[] b : bytes) {
+		// 	len += b.length;
+		// }
+		ByteArrayOutputStream o = new ByteArrayOutputStream();
+		try {
+			for (byte[] b : bytes) o.write(b);
+		} catch (IOException e) {
+			System.err.println("Impossible IO exception in combBytes" + e);
+			System.exit(-1);
+		}
+		return o.toByteArray();
+	}
 
 	final public static void main(String[] args) {
 		byte []x = new byte[256];

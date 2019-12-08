@@ -127,11 +127,9 @@ public class ServerThread extends Thread{
                         // inp.read(aux);
                     }
                     else if (cmd.equals("DWNL")) {
-                        in.read(aux, 0, 4);
-                        int len=(int)Counter.byte2long(aux);
-                        aux=new byte[len];
-                        in.read(aux);
-                        String fileName=new String(aux);
+                        byte []filenameBuf = new byte[inp.available()];
+                        inp.read(filenameBuf);
+                        String fileName=new String(filenameBuf);
                         if (!fileExists("server-files/"+fileName)) {
                             // TODO?
                         }
@@ -140,14 +138,21 @@ public class ServerThread extends Thread{
                         {
                             return;
                         }
-                        len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
-                        ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
-                        stream.write("DATA".getBytes());
+                        // len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
+                        // ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
+                        // stream.write("DATA".getBytes());
                         // stream.write(Counter.long2byteBE(fileName.getBytes().length));
                         // stream.write(fileName.getBytes());
                         // stream.write(Counter.long2byteBE(file.length));
-                        stream.write(file);
-                        cr.encMsg(out, stream.toByteArray());
+                        // stream.write(file);
+                        // cr.encMsg(out,file);
+						cr.encMsg(out,
+								  new byte[][]
+							{"DATA".getBytes()
+							 ,Counter.long2byteBE(fileName.length())
+							 ,fileName.getBytes()
+							 ,Counter.long2byteBE(file.length)
+							 ,file});
                     }
                     else if (cmd.equals("LIST")) {
                         File dir=new File("server-files");
