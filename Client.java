@@ -101,6 +101,7 @@ public class Client {
                         cr=new Crypto(key, new Counter(0));
                         byte[] msg=cr.decMsg(in);
                         ByteArrayInputStream inp=new ByteArrayInputStream(msg);
+                        System.out.println(msg.length-4);
                         byte[]cmnd=new byte[4];
                         inp.read(cmnd);
                         String cmd=new String(cmnd);
@@ -108,7 +109,6 @@ public class Client {
                             System.out.println("OK");
                         }
                         else if (cmd.equals("LIST")) {
-                            inp.read(cmnd);
                             cmd=new String(cmnd);
                             if (cmd.equals("NONE")) {
                                 System.out.println("no files");
@@ -119,45 +119,26 @@ public class Client {
                                 System.out.println("files: "+new String(cmnd));
                             }
                         }
-                        else if (cmd.equals("UPLD")) {
+                        else if (cmd.equals("DWNL")) {
+                            int len=(int)Counter.byte2long(Utility.readBytes(inp,8));
+                            System.out.println("file name length: "+len);
+                            String fileName=new String(Utility.readBytes(inp,len));
+                            File f=new File(fileName);
+                            len=(int)Counter.byte2long(Utility.readBytes(inp,8));
+                            System.out.println("filename is: " + fileName);
+                            System.out.println("file length: "+len);
+                            System.out.println("file is: "+f);
+
+                            FileOutputStream fos=new FileOutputStream(f);
+                            fos.write(Utility.readBytes(inp,len));
+                            fos.close();
+                            cr.encMsg(out, "SUCC".getBytes());
+                        }
+                        else if (cmd.equals("SUCC")) {
                             
                         }
-                        // else if (cmd.equals("DWNL")) {
-                        //     byte[] data = new byte[inp.available()];
-						// 	inp.read(data);
-						// 	System.out.println
-                        // }
-                        else if (new String(cmd).equals("DATA")) {
-							int len=(int)Counter.byte2long(Utility.readBytes(inp,8));
-							String fileName=new String(Utility.readBytes(inp,len));
-							len=(int)Counter.byte2long(Utility.readBytes(inp,8));
-							File f=new File("client-files/"+fileName);
-							System.out.println("file name length: "+len);
-							System.out.println("filename is: " + fileName);
-							System.out.println("file length: "+len);
-							System.out.println("file is: "+f);
-
-							FileOutputStream fos=new FileOutputStream(f);
-							fos.write(Utility.readBytes(inp,len));
-							fos.close();
-							// cr.encMsg(out, "SUCC".getBytes());
-                            // byte[] aux=new byte[4];
-                            // inp.read(aux);
-                            // int len=(int)Counter.byte2long(aux);
-                            // System.out.println("file name length: "+len);
-                            // aux=new byte[len];
-                            // inp.read(aux);
-                            // String fileName=new String(aux);
-                            // aux=new byte[4];
-                            // inp.read(aux);
-                            // len=(int)Counter.byte2long(aux);
-                            // System.out.println("file length: "+len);
-                            // aux=new byte[len];
-                            // inp.read(aux);
-                            // File f=new File("client-files/"+fileName);
-                            // FileOutputStream fos=new FileOutputStream(f);
-                            // fos.close();
-                            // fos.write(aux);
+                        else if (cmd.equals("FAIL")) {
+                            
                         }
                         state="WAITING";
                     }
@@ -200,7 +181,7 @@ public class Client {
             {
                 return;
             }
-			System.out.println("Uploading " + spl[1]);
+            System.out.println("Uploading " + spl[1]);
             int len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
             ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
             stream.write("UPLD".getBytes());
@@ -213,13 +194,14 @@ public class Client {
         }
         else if (spl[0].equals("dwnl")) {
             String fileName=spl[1];
-            // int len=fileName.getBytes().length+"DWNL".getBytes().length+4;
-            // ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
-            // stream.write("DWNL".getBytes());
-            // stream.write(fileName.getBytes().length);
-            // stream.write(fileName.getBytes());
-            // cr.encMsg(out, stream.toByteArray());
-			cr.encMsg(out, new byte[][]{"DWNL".getBytes(),fileName.getBytes()});
+            int len=fileName.getBytes().length+"DWNL".getBytes().length+4;
+            ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
+            stream.write("DWNL".getBytes());
+            stream.write(Counter.long2byteBE(fileName.getBytes().length));
+            stream.write(fileName.getBytes());
+            cr.encMsg(out, stream.toByteArray());
+            //System.out.println(fileName);
+            //cr.encMsg(out, ("DWNL"+fileName).getBytes());
         }
         else {
             //invalid, ignore.

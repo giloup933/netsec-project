@@ -28,6 +28,7 @@ public class Utility {
                 fis.close();
                 return b;
             } catch (Exception ex) {
+                System.out.println(fileName);
                 Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
             }
             return null;

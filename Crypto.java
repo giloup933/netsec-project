@@ -99,6 +99,7 @@ public class Crypto {
                 msgCtr = Counter.byte2long(Utility.readBytes(in, 8));
                 ctr=new Counter(msgCtr);
                 len = Counter.byte2long(Utility.readBytes(in, 8));
+                System.out.println((int)len);
                 return crypt(Utility.readBytes(in, (int)len));
             } catch (IOException ex) {
                 System.out.println("decMsg failure");

@@ -105,19 +105,19 @@ public class ServerThread extends Thread{
                     System.out.println(cmd+"!@!!!!");
                     if (cmd.equals("UPLD")) {
                         int len=(int)Counter.byte2long(Utility.readBytes(inp,8));
+                        System.out.println("file name length: "+len);
                         String fileName=new String(Utility.readBytes(inp,len));
                         len=(int)Counter.byte2long(Utility.readBytes(inp,8));
                         File f=new File("server-files/"+fileName);
-                        System.out.println("file name length: "+len);
-						System.out.println("filename is: " + fileName);
+			System.out.println("filename is: " + fileName);
                         System.out.println("file length: "+len);
-						System.out.println("file is: "+f);
+			System.out.println("file is: "+f);
 
                         FileOutputStream fos=new FileOutputStream(f);
                         fos.write(Utility.readBytes(inp,len));
                         fos.close();
-						cr.encMsg(out, "SUCC".getBytes());
-						// aux = new byte[8];
+			cr.encMsg(out, "SUCC".getBytes());
+			// aux = new byte[8];
                         // inp.read(aux);
                         // aux=new byte[len];
                         // inp.read(aux);
@@ -127,17 +127,31 @@ public class ServerThread extends Thread{
                         // inp.read(aux);
                     }
                     else if (cmd.equals("DWNL")) {
-                        byte []filenameBuf = new byte[inp.available()];
+                        /*byte []filenameBuf = new byte[inp.available()];
                         inp.read(filenameBuf);
-                        String fileName=new String(filenameBuf);
+                        String fileName=new String("server-files/"+filenameBuf);*/
+                        int len=(int)Counter.byte2long(Utility.readBytes(inp,8));
+                        String fileName=new String(Utility.readBytes(inp,len));
                         if (!fileExists("server-files/"+fileName)) {
-                            // TODO?
-                        }
-                        byte[] file=Utility.getFile(fileName);
-                        if (file==null)
-                        {
+                            System.out.println("server-files/"+fileName);
+                            cr.encMsg(out, ("FAILDWNL").getBytes());
                             return;
                         }
+                        byte[] file=Utility.getFile("server-files/"+fileName);
+                        if (file==null)
+                        {
+                            cr.encMsg(out, ("FAILDWNL").getBytes());
+                            return;
+                        }
+                        len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
+                        ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
+                        stream.write("DWNL".getBytes());
+                        stream.write(Counter.long2byteBE((fileName).getBytes().length));
+                        stream.write(fileName.getBytes());
+                        stream.write(Counter.long2byteBE(file.length));
+                        stream.write(file);
+                        cr.encMsg(out, stream.toByteArray());
+                        System.out.println(Utility.hexPrint(stream.toByteArray()));
                         // len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
                         // ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
                         // stream.write("DATA".getBytes());
@@ -146,13 +160,13 @@ public class ServerThread extends Thread{
                         // stream.write(Counter.long2byteBE(file.length));
                         // stream.write(file);
                         // cr.encMsg(out,file);
-						cr.encMsg(out,
+						/*cr.encMsg(out,
 								  new byte[][]
 							{"DATA".getBytes()
 							 ,Counter.long2byteBE(fileName.length())
 							 ,fileName.getBytes()
 							 ,Counter.long2byteBE(file.length)
-							 ,file});
+							 ,file});*/
                     }
                     else if (cmd.equals("LIST")) {
                         File dir=new File("server-files");
@@ -164,16 +178,12 @@ public class ServerThread extends Thread{
                         }
                         else
                         {
-                            String answer="";
+                            String answer="LIST";
                             for (int i=0;i<children.length;i++) {
-                                System.out.println("list"+i);
-                                answer+=children[i];
+                                answer+=children[i]+" ";
                             }
-                            int len=4+answer.getBytes().length;
-                            ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
-                            stream.write("LIST".getBytes());
-                            stream.write(answer.getBytes());
-                            cr.encMsg(out, stream.toByteArray());
+                            System.out.println(answer);
+                            cr.encMsg(out, answer.getBytes());
                         }
                     }
 					else if (cmd.equals("STTR")) {
