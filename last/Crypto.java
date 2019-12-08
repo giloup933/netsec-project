@@ -12,12 +12,15 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -69,9 +72,35 @@ public class Crypto {
 		ctr.inc();
 		return d.digest();
 	}
+        
+        final public void encMsg(OutputStream out, byte[] msg) {
+            try {
+                byte[] c=ctr.getBytes();
+                byte[] b=crypt(msg);
+                long len=b.length;
+                out.write("ENCR".getBytes());
+                out.write(c);
+                out.write(Counter.long2byteBE(len));
+                out.write(b);
+                out.flush();
+            } catch (IOException ex) {
+                Logger.getLogger(Utility.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        final public byte[] decMsg(InputStream in) {
+            long msgCtr, len;
+            try {
+                msgCtr = Counter.byte2long(Utility.readBytes(in, 8));
+                len = Counter.byte2long(Utility.readBytes(in, 8));
+                return Utility.readBytes(in, (int)len);
+            } catch (IOException ex) {
+                Logger.getLogger(Crypto.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            return null;
+        }
 
 	final public byte[] crypt(byte []in) {
-		System.err.println("in.length is " + in.length);
 		byte []pad = null;
 		int padoff = 0;
 		final byte []out = new byte[in.length];

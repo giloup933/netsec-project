@@ -1,4 +1,9 @@
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -100,17 +105,8 @@ public class Client {
                     }
                     else if (command.equals("ENCR"))
                     {
-                        b=new byte[4];
-                        in.read(b, 1, 4);
-                        System.out.println(new String(cr.crypt(b)));
-                    }
-                    else if (command.equals("UPLD"))
-                    {
-                        
-                    }
-                    else if (command.equals("DWNL"))
-                    {
-                        
+                        byte[] msg=cr.decMsg(in);
+                        state="WAITING";
                     }
                     else if (command.equals("DATA"))
                     {
@@ -157,50 +153,47 @@ public class Client {
         }
         else if (spl[0].equals("upld")) {
             String fileName=spl[1];
-            long len=fileName.length();
-            out.write("UPLD".getBytes());
-            out.write(Counter.long2byteBE(len));
-            out.write(fileName.getBytes());
+            byte[] file=file(fileName);
+            if (file==null)
+            {
+                return;
+            }
+            int len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
+            ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
+            stream.write("UPLD".getBytes());
+            stream.write(fileName.getBytes().length);
+            stream.write(fileName.getBytes());
+            stream.write(file.length);
+            stream.write(file);
+            cr.encMsg(out, stream.toByteArray());
         }
         else if (spl[0].equals("dwnl")) {
             String fileName=spl[1];
-            toSend="DWNL     "+fileName;
-        }
-        //System.out.println("Sending: "+toSend+".");
-        //out.write(toSend.getBytes());
-        out.flush();
-        /*String toSend="";
-        String[] spl=str.split(" ");
-        if (str.equals("quit")) {
-            toSend="QUIT";
-        }
-        else if (str.equals("key")) {
-            toSend="RKEY";
-        }
-        else if (str.equals("init")) {
-            id=new String(Crypto.randByteStr(4));
-            key=Crypto.randByteStr(32);
-            toSend="INIT "+id+" "+encryptRSA(key, Server.pubKey);//our code encrypted by RSA with server's public code
-        }
-        else if (str.equals("list")) {
-            toSend="LIST";
-        }
-        else if (spl[0].equals("upld")) {
-            toSend="UPLD "+spl[1];//consider adding a flow ID to support several concurrent uploads/downloads
-        }
-        else if (spl[0].equals("dwnl")) {
-            toSend="DWNL "+spl[1];
-            fileName=spl[1];
-            awaits_dwnl=true;
+            int len=fileName.getBytes().length+"DWNL".getBytes().length+4;
+            ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
+            stream.write("DWNL".getBytes());
+            stream.write(fileName.getBytes().length);
+            stream.write(fileName.getBytes());
+            cr.encMsg(out, stream.toByteArray());
         }
         else {
             //invalid, ignore.
             state="WAITING";
             return;
         }
-        out.write(toSend+"\n");
-        out.flush();
-        System.out.println("delivered.");*/
+    }
+    public byte[] file(String fileName) {
+        File f=new File(fileName);
+        FileInputStream fis;
+        try {
+            fis = new FileInputStream(f);
+            byte[] b=new byte[(int)f.length()];
+            fis.read(b);
+            return b;
+        } catch (Exception ex) {
+            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
     }
     public byte[] encryptRSA(byte[] plaintext, Key pubKey) {
         Cipher encryptCipher = null;

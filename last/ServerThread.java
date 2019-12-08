@@ -85,34 +85,42 @@ public class ServerThread extends Thread{
                     b=new byte[len];
                     in.read(b, 0, len);
                     key=Server.decryptRSA(b, Server.privKey);
-                    out.write("ENCR".getBytes());
-                    out.write(cr.crypt("CONF".getBytes()));
-                    out.flush();
+                    Random r=new Random();
+                    long cntr=r.nextLong();
+                    ctr=new Counter(cntr);
+                    cr=new Crypto(key, ctr);
+                    cr.encMsg(out, "CONF".getBytes());
                 }
-                    /*else if (command.equals("ENCR"))
-                    {
-                        b=new byte[4];
-                        in.read(b, 1, 4);
-                        System.out.println("id="+new String(b));
-                        b=new byte[8];
-                        in.read(b, 1, 8);
-                        System.out.println("counter="+new String(b));
-                        if (ctr.get()!=new Long(new String(b)))
-                        {
-                            //sync?
+                else if (command.equals("ENCR"))
+                {
+                    byte[] msg=cr.decMsg(in);
+                    byte[] aux=new byte[4];
+                    in.read(aux, 0, 4);
+                    String cmd=new String(aux);
+                    if (cmd.equals("UPLD")) {
+                        in.read(aux, 0, 4);
+                        int len=(int)Counter.byte2long(aux);
+                        aux=new byte[len];
+                        in.read(aux, 0, len);
+                        String fileName=new String(aux);
+                        in.read(aux, 0, 4);
+                        len=(int)Counter.byte2long(aux);
+                        aux=new byte[len];
+                        in.read(aux, 0, len);//this is the file
+                        File f=new File(fileName);
+                        FileOutputStream fos=new FileOutputStream(f);
+                        fos.write(aux);
+                    }
+                    else if (cmd.equals("DWNL")) {
+                        in.read(aux, 0, 4);
+                        int len=(int)Counter.byte2long(aux);
+                        aux=new byte[len];
+                        in.read(aux, 0, len);
+                        String fileName=new String(aux);
+                        if (!fileExists("server-files/"+fileName)) {
+                            
                         }
-                        ctr.inc();
-                        b=new byte[4];
-                        in.read(b, 1, 4);
-                        System.out.println("msg="+new String(b));//verify it is CONF
-                    }*/
-                else if (command.equals("UPLD"))
-                {
-                        
-                }
-                else if (command.equals("DWNL"))
-                {
-                        
+                    }
                 }
                 else if (command.equals("DATA"))
                 {
@@ -139,5 +147,8 @@ public class ServerThread extends Thread{
             System.out.println(e+"...");
         }
         System.out.println("left");
+    }
+    private boolean fileExists(String fileName) {
+        return true;
     }
 }

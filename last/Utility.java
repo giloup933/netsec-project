@@ -1,6 +1,9 @@
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Utility {
 	final public static String hexPrint(byte[] bytes) {
@@ -11,7 +14,9 @@ public class Utility {
 		return result;
 	}
         
-        final public byte[] readBytes (InputStream in, int len) throws IOException {
+        
+        
+        final public static byte[] readBytes (InputStream in, int len) throws IOException {
             byte[] b=new byte[8];
             in.read(b, 0, len);
             return b;
