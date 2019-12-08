@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -106,6 +107,31 @@ public class Client {
                     else if (command.equals("ENCR"))
                     {
                         byte[] msg=cr.decMsg(in);
+                        if (msg.equals("CONF")) {
+                            
+                        }
+                        else if (msg.equals("UPLD")) {
+                            
+                        }
+                        else if (msg.equals("DWNL")) {
+                            
+                        }
+                        else if (msg.equals("DATA")) {
+                            byte[] aux=new byte[4];
+                            in.read(aux, 0, 4);
+                            int len=(int)Counter.byte2long(aux);
+                            aux=new byte[len];
+                            in.read(aux, 0, len);
+                            String fileName=new String(aux);
+                            in.read(aux, 0, 4);
+                            len=(int)Counter.byte2long(aux);
+                            aux=new byte[len];
+                            in.read(aux, 0, len);//this is the file
+                            File f=new File("client-files/"+fileName);
+                            FileOutputStream fos=new FileOutputStream(f);
+                            fos.close();
+                            fos.write(aux);
+                        }
                         state="WAITING";
                     }
                     else if (command.equals("DATA"))
@@ -153,7 +179,7 @@ public class Client {
         }
         else if (spl[0].equals("upld")) {
             String fileName=spl[1];
-            byte[] file=file(fileName);
+            byte[] file=Utility.getFile(fileName);
             if (file==null)
             {
                 return;
@@ -182,19 +208,7 @@ public class Client {
             return;
         }
     }
-    public byte[] file(String fileName) {
-        File f=new File(fileName);
-        FileInputStream fis;
-        try {
-            fis = new FileInputStream(f);
-            byte[] b=new byte[(int)f.length()];
-            fis.read(b);
-            return b;
-        } catch (Exception ex) {
-            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return null;
-    }
+    
     public byte[] encryptRSA(byte[] plaintext, Key pubKey) {
         Cipher encryptCipher = null;
         try {

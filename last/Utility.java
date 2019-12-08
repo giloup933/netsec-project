@@ -1,3 +1,6 @@
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -14,7 +17,34 @@ public class Utility {
 		return result;
 	}
         
+        public static byte[] getFile(String fileName) {
+            File f=new File(fileName);
+            FileInputStream fis;
+            try {
+                fis = new FileInputStream(f);
+                byte[] b=new byte[(int)f.length()];
+                fis.read(b);
+                fis.close();
+                return b;
+            } catch (Exception ex) {
+                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            return null;
+        }
         
+        public static boolean saveFile(String fileName, byte[] file) {
+            File f=new File(fileName);
+            FileOutputStream fos;
+            try {
+                fos = new FileOutputStream(f);
+                fos.write(file);
+                fos.close();
+                return true;
+            } catch (Exception ex) {
+                Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            return false;
+        }
         
         final public static byte[] readBytes (InputStream in, int len) throws IOException {
             byte[] b=new byte[8];

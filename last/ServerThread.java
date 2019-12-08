@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -107,8 +108,9 @@ public class ServerThread extends Thread{
                         len=(int)Counter.byte2long(aux);
                         aux=new byte[len];
                         in.read(aux, 0, len);//this is the file
-                        File f=new File(fileName);
+                        File f=new File("server-files/"+fileName);
                         FileOutputStream fos=new FileOutputStream(f);
+                        fos.close();
                         fos.write(aux);
                     }
                     else if (cmd.equals("DWNL")) {
@@ -119,6 +121,40 @@ public class ServerThread extends Thread{
                         String fileName=new String(aux);
                         if (!fileExists("server-files/"+fileName)) {
                             
+                        }
+                        byte[] file=Utility.getFile(fileName);
+                        if (file==null)
+                        {
+                            return;
+                        }
+                        len=fileName.getBytes().length+file.length+8+"UPLD".getBytes().length;
+                        ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
+                        stream.write("DATA".getBytes());
+                        stream.write(fileName.getBytes().length);
+                        stream.write(fileName.getBytes());
+                        stream.write(file.length);
+                        stream.write(file);
+                        cr.encMsg(out, stream.toByteArray());
+                    }
+                    else if (cmd.equals("LIST")) {
+                        File dir=new File("server-files");
+                        String[] children=dir.list();
+                        if (children==null)
+                        {
+                            System.out.println("empty");
+                            cr.encMsg(out, "LISTNONE".getBytes());
+                        }
+                        else
+                        {
+                            String answer="";
+                            for (int i=0;i<children.length;i++) {
+                                answer+=children[i];
+                            }
+                            int len=4+answer.getBytes().length;
+                            ByteArrayOutputStream stream=new ByteArrayOutputStream(len);
+                            stream.write("LIST".getBytes());
+                            stream.write(answer.getBytes());
+                            cr.encMsg(out, stream.toByteArray());
                         }
                     }
                 }
